@@ -90,7 +90,7 @@ class GroqProvider(BaseLLMProvider):
                 tot_toks = usage.total_tokens if usage else (prompt_toks + comp_toks)
 
                 msg = response.choices[0].message
-                content = msg.content or getattr(msg, "reasoning", "") or ""
+                content = msg.content or ""
 
                 return LLMResponse(
                     content=content,
@@ -167,7 +167,7 @@ class GroqProvider(BaseLLMProvider):
                 tot_toks = usage.total_tokens if usage else (prompt_toks + comp_toks)
 
                 msg = response.choices[0].message
-                content = msg.content or getattr(msg, "reasoning", "") or ""
+                content = msg.content or ""
 
                 return LLMResponse(
                     content=content,
@@ -236,7 +236,7 @@ class GroqProvider(BaseLLMProvider):
                 )
                 has_yielded = False
                 for chunk in stream_response:
-                    delta = chunk.choices[0].delta.content or getattr(chunk.choices[0].delta, "reasoning", "") or ""
+                    delta = chunk.choices[0].delta.content or ""
                     if delta:
                         has_yielded = True
                         yield delta
@@ -288,7 +288,7 @@ class GroqProvider(BaseLLMProvider):
                     **kwargs,
                 )
                 async for chunk in stream_response:
-                    delta = chunk.choices[0].delta.content or getattr(chunk.choices[0].delta, "reasoning", "") or ""
+                    delta = chunk.choices[0].delta.content or ""
                     if delta:
                         yield delta
 

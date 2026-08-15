@@ -39,9 +39,9 @@ Your job is to analyze a user's question and decompose it into 2 to 4 structured
 Each section will be researched and synthesized by a dedicated sub-agent to produce an in-depth, comprehensive report.
 
 Requirements:
-1. Divide the question logically (e.g. 1. Core Overview & Mechanism, 2. Deep Dive / Architecture, 3. Comparative Analysis / Tradeoffs, 4. Future Outlook / Implications).
-2. For simple or brief questions, produce 2 focused sections. For complex, technical, or broad questions, produce 3 to 4 sections.
-3. Respond ONLY with valid JSON matching this schema:
+1. Divide the question logically (e.g. 1. Core Overview & Background, 2. Deep Dive / Architecture, 3. Comparative Analysis / Key Details, 4. Future Outlook / Significance).
+2. For simple questions, produce 2 focused sections. For complex or broad questions, produce 3 to 4 sections.
+3. Respond ONLY with valid JSON matching this schema. NO thoughts, NO commentary, NO markdown fences:
 {
   "summary": "Brief 1-sentence description of the research angle",
   "sections": [
@@ -53,7 +53,6 @@ Requirements:
     }
   ]
 }
-Do NOT wrap with backticks or add any other text outside the JSON.
 """
 
 

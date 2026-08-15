@@ -11,11 +11,10 @@ logger = logging.getLogger(__name__)
 # Default verified active chat models on Groq
 DEFAULT_ROTATING_MODELS = [
     "llama-3.3-70b-versatile",
-    "openai/gpt-oss-120b",
     "llama-3.1-8b-instant",
-    "openai/gpt-oss-20b",
-    "qwen/qwen3.6-27b",
     "groq/compound",
+    "qwen/qwen3.6-27b",
+    "groq/compound-mini",
 ]
 
 

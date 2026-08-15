@@ -347,12 +347,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function stripThinkingArtifacts(text) {
+    if (!text) return '';
+    // Strip <think>...</think> tags
+    let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    cleaned = cleaned.replace(/<think>[\s\S]*/gi, '');
+
+    // Strip "Here's a thinking process:" or "We need to write the section" meta blocks
+    cleaned = cleaned.replace(/Here's a thinking process:[\s\S]*?(?=\n###|\n\n[A-Z]|$)/gi, '');
+    cleaned = cleaned.replace(/We need to write the section[\s\S]*?(?=\n###|\n\n[A-Z]|$)/gi, '');
+    cleaned = cleaned.replace(/Let's craft\.?\s*(?=###)/gi, '');
+
+    return cleaned.trimStart();
+  }
+
   // --- Render Answer with Interactive Citations ---
   function renderAnswerWithCitations(container, rawMarkdown) {
     if (!rawMarkdown) return;
     
+    // Clean any thinking or meta scratchpad
+    const cleanedMarkdown = stripThinkingArtifacts(rawMarkdown);
+    if (!cleanedMarkdown) return;
+
     // Parse standard markdown
-    let html = marked.parse(rawMarkdown);
+    let html = marked.parse(cleanedMarkdown);
 
     // Replace [1], [2], [1][2] markers with interactive styled chips
     html = html.replace(/\[(\d+)\]/g, (match, id) => {

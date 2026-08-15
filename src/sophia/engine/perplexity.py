@@ -150,6 +150,13 @@ class PerplexityEngine:
                 yield PerplexityStreamEvent(event_type="citations", data=cached_data.get("citations", []))
                 yield PerplexityStreamEvent(event_type="follow_ups", data=cached_data.get("follow_ups", []))
                 yield PerplexityStreamEvent(event_type="done", data="complete")
+                if session:
+                    session.add_user_message(user_question)
+                    session.add_assistant_message(
+                        content=cached_data.get("answer", ""),
+                        sources=[SearchResult(**s) if isinstance(s, dict) else s for s in cached_data.get("sources", [])],
+                        search_queries=[cached_data.get("standalone_query", user_question)],
+                    )
                 return
 
         # 2. Query Rewriting
@@ -238,7 +245,10 @@ class PerplexityEngine:
             accumulated_tokens.append(token)
             yield PerplexityStreamEvent(event_type="token", data=token)
 
-        full_answer = "".join(accumulated_tokens)
+        full_answer = "".join(accumulated_tokens).strip()
+        if not full_answer:
+            full_answer = "I searched the web for your query, but could not synthesize a complete answer at this time. Please check your network or try asking again."
+            yield PerplexityStreamEvent(event_type="token", data=full_answer)
 
         # 9. Citation Mapping
         citations: list[Citation] = map_citations(full_answer, search_resp.results)

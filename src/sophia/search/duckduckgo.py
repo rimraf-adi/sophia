@@ -64,7 +64,7 @@ class DuckDuckGoSearcher(BaseSearchProvider):
         region: str | None = None,
         safesearch: Literal["on", "moderate", "off"] | None = None,
         timelimit: str | None = None,
-        backend: str = "api,html,lite",
+        backend: str = "auto",
         **kwargs: Any,
     ) -> SearchResponse:
         """Execute a text web search synchronously.
@@ -252,7 +252,7 @@ class DuckDuckGoSearcher(BaseSearchProvider):
         region: str | None = None,
         safesearch: Literal["on", "moderate", "off"] | None = None,
         timelimit: str | None = None,
-        backend: str = "api,html,lite",
+        backend: str = "auto",
         **kwargs: Any,
     ) -> SearchResponse:
         """Execute a text search asynchronously."""

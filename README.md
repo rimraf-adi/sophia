@@ -74,7 +74,7 @@ You can also ask questions directly from the command line:
 
 ```bash
 # Ask a one-off question
-uv run python main.py "Why is DeepSeek R1 significant?"
+uv run python main.py "Why is DeepSeek R1 significant in AI reasoning?"
 
 # Or start an interactive chat session
 uv run python main.py

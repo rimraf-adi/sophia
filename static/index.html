@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sophia — AI Search & Discovery</title>
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Markdown parser and syntax highlighter -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Sidebar / Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-asterisk"></i></div>
+        <span class="brand-text">soph<span class="brand-accent">ia</span></span>
+      </div>
+      <button id="new-thread-btn" class="btn-icon" title="New Thread">
+        <i class="fa-solid fa-pen-to-square"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-title">DISCOVERY</div>
+      <button class="nav-btn active" id="nav-home">
+        <i class="fa-solid fa-compass"></i> Discover
+      </button>
+      <button class="nav-btn" id="nav-models-modal">
+        <i class="fa-solid fa-server"></i> Key & Model Pool
+      </button>
+    </div>
+
+    <div class="sidebar-status-card">
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <span id="pool-status-text">8 Groq Keys Active</span>
+      </div>
+      <div class="status-meta">Double Round-Robin Enabled</div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="main-container">
+    <!-- Header -->
+    <header class="top-nav">
+      <div class="session-badge">
+        <i class="fa-solid fa-layer-group"></i>
+        <span id="session-display">Session: New</span>
+      </div>
+      <div class="header-actions">
+        <button id="toggle-cache-btn" class="chip-toggle active" title="Toggle Cache">
+          <i class="fa-solid fa-bolt"></i> Cache: ON
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat / Results Container -->
+    <section class="chat-viewport" id="chat-viewport">
+      <!-- Hero Greeting (Visible when empty) -->
+      <div class="hero-section" id="hero-section">
+        <div class="hero-badge"><i class="fa-solid fa-bolt-lightning"></i> Agentic Live RAG Engine</div>
+        <h1 class="hero-title">Where knowledge begins</h1>
+        <p class="hero-subtitle">Ask anything. Real-time web search, Trafilatura content extraction, and cited synthesis.</p>
+        
+        <div class="suggestion-chips">
+          <button class="chip" data-query="What are the biggest updates in Python 3.13 free-threaded GIL?">
+            <i class="fa-brands fa-python"></i> Python 3.13 no-GIL
+          </button>
+          <button class="chip" data-query="Explain DeepSeek R1 reasoning architecture vs OpenAI o1">
+            <i class="fa-solid fa-brain"></i> DeepSeek R1 vs o1
+          </button>
+          <button class="chip" data-query="Latest breakthroughs in room-temperature quantum computing">
+            <i class="fa-solid fa-atom"></i> Quantum Computing
+          </button>
+        </div>
+      </div>
+
+      <!-- Message Thread Container -->
+      <div class="thread-container" id="thread-container"></div>
+    </section>
+
+    <!-- Bottom Input Box -->
+    <footer class="input-container">
+      <form id="search-form" class="search-box">
+        <div class="input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <textarea
+            id="query-input"
+            placeholder="Ask anything or follow up..."
+            rows="1"
+            required
+            autocomplete="off"
+          ></textarea>
+        </div>
+        <div class="input-actions">
+          <button type="submit" id="send-btn" class="send-button" title="Search">
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+        </div>
+      </form>
+      <div class="footer-caption">Powered by DuckDuckGo, Trafilatura & Rotating Groq LLMs with Inline Citations.</div>
+    </footer>
+  </main>
+
+  <!-- Key & Models Diagnostic Modal -->
+  <div class="modal-overlay" id="models-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-microchip"></i> Key Pool & Model Rotation Status</h2>
+        <button class="close-btn" id="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Fetching active pool stats...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -225,6 +225,51 @@ body {
   color: var(--text-secondary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mode-switch-group {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-pill-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.mode-pill-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-pill-btn.active {
+  background: var(--bg-hover);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+
+.mode-pill-btn.active[data-mode="deep"] {
+  color: #a78bfa;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.25);
+}
+
 .chip-toggle {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -385,6 +430,70 @@ body {
   border-radius: var(--radius-md);
   margin-bottom: 20px;
   border: 1px solid rgba(32, 184, 205, 0.2);
+}
+
+/* Agentic Plan Outline Checklist */
+.plan-outline-container {
+  background: rgba(167, 139, 250, 0.06);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c4b5fd;
+  margin-bottom: 12px;
+}
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--border-color);
+  transition: var(--transition-fast);
+}
+
+.plan-item.active {
+  color: var(--text-primary);
+  border-left-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+  font-weight: 500;
+}
+
+.plan-item.done {
+  color: var(--text-muted);
+  border-left-color: var(--accent-emerald);
+}
+
+.plan-item.done .plan-icon {
+  color: var(--accent-emerald);
+}
+
+.plan-item.active .plan-icon {
+  color: #a78bfa;
+}
+
+.plan-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 0.75rem;
 }
 
 /* Sources Grid */

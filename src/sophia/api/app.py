@@ -62,6 +62,7 @@ async def stream_query(
     q: str = Query(..., description="User query text"),
     session_id: str | None = Query(default=None, description="Session ID"),
     use_cache: bool = Query(default=True, description="Use cache"),
+    mode: str = Query(default="quick", description="Synthesis mode: 'quick' or 'deep'"),
 ):
     """Server-Sent Events (SSE) endpoint streaming real-time pipeline events."""
 
@@ -71,6 +72,7 @@ async def stream_query(
                 user_question=q,
                 session_id=session_id,
                 use_cache=use_cache,
+                mode=mode,
             ):
                 payload = {
                     "event_type": event.event_type,

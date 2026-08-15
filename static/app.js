@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let sessionId = localStorage.getItem('sophia_session_id') || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   localStorage.setItem('sophia_session_id', sessionId);
   let useCache = true;
+  let searchMode = 'quick'; // 'quick' | 'deep'
   let activeEventSource = null;
 
   // --- Elements ---
@@ -22,6 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const sessionDisplay = document.getElementById('session-display');
   const poolStatusText = document.getElementById('pool-status-text');
 
+  // Mode Buttons
+  const modeQuickBtn = document.getElementById('mode-quick-btn');
+  const modeDeepBtn = document.getElementById('mode-deep-btn');
+
   // Modal elements
   const modelsModal = document.getElementById('models-modal');
   const navModelsBtn = document.getElementById('nav-models-modal');
@@ -29,6 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalBody = document.getElementById('modal-body');
 
   sessionDisplay.textContent = `Session: ${sessionId.substring(0, 14)}...`;
+
+  // --- Mode Switching ---
+  if (modeQuickBtn && modeDeepBtn) {
+    modeQuickBtn.addEventListener('click', () => {
+      searchMode = 'quick';
+      modeQuickBtn.classList.add('active');
+      modeDeepBtn.classList.remove('active');
+    });
+
+    modeDeepBtn.addEventListener('click', () => {
+      searchMode = 'deep';
+      modeDeepBtn.classList.add('active');
+      modeQuickBtn.classList.remove('active');
+    });
+  }
 
   // --- Auto-resize textarea ---
   queryInput.addEventListener('input', () => {
@@ -74,8 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
     useCache = !useCache;
     toggleCacheBtn.classList.toggle('active', useCache);
     toggleCacheBtn.innerHTML = useCache 
-      ? '<i class="fa-solid fa-bolt"></i> Cache: ON'
-      : '<i class="fa-solid fa-bolt-slash"></i> Cache: OFF';
+      ? '<i class="fa-solid fa-database"></i> Cache: ON'
+      : '<i class="fa-solid fa-database"></i> Cache: OFF';
   });
 
   // --- New Thread ---
@@ -163,12 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
     heroSection.style.display = 'none';
     sendBtn.disabled = true;
 
-    // 1. Add User Block
+    // 1. Add User Block with Mode Badge
     const userBlock = document.createElement('div');
     userBlock.className = 'user-query-block';
+    const modeBadge = searchMode === 'deep' 
+      ? '<span style="color: #a78bfa; font-size: 0.75rem; background: rgba(167,139,250,0.15); padding: 2px 8px; border-radius: 12px; margin-left: 10px;"><i class="fa-solid fa-brain"></i> Deep</span>' 
+      : '';
     userBlock.innerHTML = `
       <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-      <div class="user-query-text">${escapeHtml(query)}</div>
+      <div class="user-query-text">${escapeHtml(query)} ${modeBadge}</div>
     `;
     threadContainer.appendChild(userBlock);
 
@@ -180,6 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
     stepper.className = 'pipeline-progress';
     stepper.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Initializing search pipeline...</span>';
     responseBlock.appendChild(stepper);
+
+    // Agentic Plan Outline Container (hidden by default)
+    const planContainer = document.createElement('div');
+    planContainer.className = 'plan-outline-container';
+    planContainer.style.display = 'none';
+    responseBlock.appendChild(planContainer);
 
     const sourcesContainer = document.createElement('div');
     sourcesContainer.className = 'sources-section';
@@ -203,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // SSE Stream Setup
     let accumulatedText = '';
     let sourcesList = [];
-    const streamUrl = `/api/query/stream?q=${encodeURIComponent(query)}&session_id=${encodeURIComponent(sessionId)}&use_cache=${useCache}`;
+    const streamUrl = `/api/query/stream?q=${encodeURIComponent(query)}&session_id=${encodeURIComponent(sessionId)}&use_cache=${useCache}&mode=${searchMode}`;
     activeEventSource = new EventSource(streamUrl);
 
     activeEventSource.onmessage = (event) => {
@@ -215,6 +244,37 @@ document.addEventListener('DOMContentLoaded', () => {
           stepper.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>${escapeHtml(data)}</span>`;
         } else if (event_type === 'query_rewritten') {
           stepper.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> <span>Searching for: <strong>"${escapeHtml(data)}"</strong></span>`;
+        } else if (event_type === 'plan') {
+          const planData = data || {};
+          const sections = planData.sections || [];
+          if (sections.length > 0) {
+            planContainer.style.display = 'block';
+            planContainer.innerHTML = `
+              <div class="plan-header"><i class="fa-solid fa-sitemap"></i> Sub-agent Research Outline (${sections.length} sub-tasks):</div>
+              <div class="plan-list">
+                ${sections.map(s => `
+                  <div class="plan-item" id="plan-item-${s.id}">
+                    <span class="plan-icon"><i class="fa-regular fa-circle"></i></span>
+                    <span><strong>${escapeHtml(s.title)}</strong> — ${escapeHtml(s.goal || s.sub_query)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          }
+        } else if (event_type === 'section_start') {
+          const sec = data || {};
+          const targetItem = planContainer.querySelector(`#plan-item-${sec.id}`);
+          if (targetItem) {
+            targetItem.className = 'plan-item active';
+            targetItem.querySelector('.plan-icon').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+          }
+        } else if (event_type === 'section_done') {
+          const sec = data || {};
+          const targetItem = planContainer.querySelector(`#plan-item-${sec.id}`);
+          if (targetItem) {
+            targetItem.className = 'plan-item done';
+            targetItem.querySelector('.plan-icon').innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+          }
         } else if (event_type === 'sources') {
           sourcesList = data || [];
           if (sourcesList.length > 0) {

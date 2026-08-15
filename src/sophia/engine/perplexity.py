@@ -11,6 +11,7 @@ from typing import AsyncGenerator
 from sophia.cache.cache import QueryCache
 from sophia.chunk.chunker import TextChunk, TextChunker
 from sophia.chunk.reranker import InMemoryReranker, RankedChunk
+from sophia.engine.agentic.agentic_orchestrator import AgenticEngine
 from sophia.engine.citation_mapper import (
     Citation,
     assemble_reranked_context,
@@ -26,22 +27,27 @@ from sophia.session.session import ConversationSession, SessionStore
 
 logger = logging.getLogger(__name__)
 
-QUERY_REWRITE_SYSTEM_PROMPT = """You are a search query optimizer.
-Rewrite the user's latest message into a single, standalone search engine query using the conversation history if provided.
-Return ONLY the standalone search query text, nothing else. Do not add quotes or markdown.
+QUERY_REWRITE_SYSTEM_PROMPT = """You are a Search Query Optimizer.
+Your job is to rewrite follow-up questions into standalone, keyword-rich search queries.
+
+Rules:
+1. If the user question refers to previous context (e.g., 'how does it work', 'compare them', 'why?'), resolve pronouns and implicit references using the conversation history.
+2. If the user question is already standalone, return it as-is.
+3. Output ONLY the standalone search query without quotes, explanations, or punctuation.
 """
 
 STRICT_GROUNDED_PROMPT = """You are a grounded AI search assistant (like Perplexity AI).
-Answer the user's question using ONLY the provided sources below.
+Your mission is to synthesize a direct, highly accurate, and comprehensive answer to the user's question using ONLY the provided numbered sources.
 
 Strict Rules:
-1. Ground your answer strictly on the source chunks provided. Do NOT extrapolate or hallucinate facts not in sources.
-2. Cite every factual claim with matching [1], [2], or [1][3] bracketed citation markers.
-3. If the sources do not contain the answer, explicitly state: "Based on the retrieved sources, there is not enough information to answer this question."
-4. Format response cleanly using markdown (headings, bullet points, code blocks).
+1. Every single factual claim MUST be cited with numeric bracket citations like [1], [2], [1][3] immediately after the claim.
+2. NEVER make claims that are not supported by the provided text.
+3. Use markdown formatting with bullet points, bold text, or code blocks where helpful for clarity.
+4. If sources conflict or information is missing, clearly state so.
 """
 
-FOLLOW_UP_PROMPT = """Based on the user's question and the generated answer, propose 3 relevant follow-up questions that the user might want to explore next.
+FOLLOW_UP_PROMPT = """You are a helpful research assistant.
+Based on the question and synthesized answer, suggest 3 relevant, interesting follow-up questions the user might want to explore next.
 
 Output ONLY a valid JSON list of 3 strings.
 Example: ["How do I install this?", "What are the performance differences?", "Is there an alternative?"]
@@ -68,6 +74,7 @@ class PerplexityEngine:
         self.reranker = reranker or InMemoryReranker()
         self.cache = cache or QueryCache(db_path="cache.db")
         self.session_store = session_store or SessionStore()
+        self.agentic_engine = AgenticEngine(router=self.router, reranker=self.reranker)
 
     async def rewrite_query(self, user_question: str, session: ConversationSession | None = None) -> str:
         """2.1 Query Rewriter: Creates standalone search query taking multi-turn history into account."""
@@ -131,6 +138,7 @@ class PerplexityEngine:
         user_question: str,
         session_id: str | None = None,
         use_cache: bool = True,
+        mode: str = "quick",
         max_search_results: int = 8,
         top_k_chunks: int = 8,
     ) -> AsyncGenerator[PerplexityStreamEvent, None]:
@@ -139,8 +147,9 @@ class PerplexityEngine:
         session = self.session_store.get_or_create(session_id) if session_id else None
 
         # 1. Check Cache
+        cache_key = f"{mode}:{user_question}"
         if use_cache:
-            cached_data = self.cache.get(user_question)
+            cached_data = self.cache.get(cache_key) or self.cache.get(user_question)
             if cached_data:
                 yield PerplexityStreamEvent(event_type="status", data="Loading cached answer...")
                 yield PerplexityStreamEvent(event_type="sources", data=cached_data.get("sources", []))
@@ -216,65 +225,83 @@ class PerplexityEngine:
                     )
                 )
 
-        # 6. In-Memory BM25 Reranking
-        yield PerplexityStreamEvent(event_type="status", data="Reranking chunks for query relevance...")
-        ranked_chunks: list[RankedChunk] = self.reranker.rerank(
-            query=standalone_query,
-            chunks=all_chunks,
-            top_k=top_k_chunks,
-        )
-
-        # 7. Context Assembly
-        grounded_context = assemble_reranked_context(ranked_chunks, max_chunks=top_k_chunks)
-        user_prompt = f"Sources:\n{grounded_context}\n\nUser Question:\n{user_question}"
-
-        messages = [
-            {"role": "system", "content": STRICT_GROUNDED_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ]
-
-        # 8. LLM Synthesis Streaming with Key & Model Rotation
-        yield PerplexityStreamEvent(event_type="status", data="Synthesizing answer with live citations...")
         accumulated_tokens: list[str] = []
+        citations_data: list[dict] = []
 
-        async for token in self.router.astream(
-            messages=messages,
-            temperature=0.2,
-            max_tokens=1500,
-        ):
-            accumulated_tokens.append(token)
-            yield PerplexityStreamEvent(event_type="token", data=token)
+        # 6. Branch: Agentic Deep Mode vs Fast Single-shot Mode
+        if mode in ("deep", "agentic"):
+            async for agent_event in self.agentic_engine.astream_agentic_report(
+                user_question=user_question,
+                standalone_query=standalone_query,
+                search_results=search_resp.results,
+                all_chunks=all_chunks,
+            ):
+                if agent_event.event_type == "token":
+                    accumulated_tokens.append(agent_event.data)
+                elif agent_event.event_type == "citations":
+                    citations_data = agent_event.data
+                yield agent_event
+        else:
+            # Fast single-shot synthesis
+            yield PerplexityStreamEvent(event_type="status", data="Reranking chunks for query relevance...")
+            ranked_chunks: list[RankedChunk] = self.reranker.rerank(
+                query=standalone_query,
+                chunks=all_chunks,
+                top_k=top_k_chunks,
+            )
+
+            grounded_context = assemble_reranked_context(ranked_chunks, max_chunks=top_k_chunks)
+            user_prompt = f"Sources:\n{grounded_context}\n\nUser Question:\n{user_question}"
+
+            messages = [
+                {"role": "system", "content": STRICT_GROUNDED_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ]
+
+            yield PerplexityStreamEvent(event_type="status", data="Synthesizing answer with live citations...")
+
+            async for token in self.router.astream(
+                messages=messages,
+                temperature=0.2,
+                max_tokens=1500,
+            ):
+                accumulated_tokens.append(token)
+                yield PerplexityStreamEvent(event_type="token", data=token)
+
+            full_answer_fast = "".join(accumulated_tokens).strip()
+            if not full_answer_fast:
+                full_answer_fast = "I searched the web for your query, but could not synthesize a complete answer at this time. Please check your network or try asking again."
+                yield PerplexityStreamEvent(event_type="token", data=full_answer_fast)
+
+            citations: list[Citation] = map_citations(full_answer_fast, search_resp.results)
+            citations_data = [c.model_dump() for c in citations]
+            yield PerplexityStreamEvent(event_type="citations", data=citations_data)
 
         full_answer = "".join(accumulated_tokens).strip()
-        if not full_answer:
-            full_answer = "I searched the web for your query, but could not synthesize a complete answer at this time. Please check your network or try asking again."
-            yield PerplexityStreamEvent(event_type="token", data=full_answer)
 
-        # 9. Citation Mapping
-        citations: list[Citation] = map_citations(full_answer, search_resp.results)
-        yield PerplexityStreamEvent(event_type="citations", data=[c.model_dump() for c in citations])
-
-        # 10. Follow-up Generation
+        # 7. Follow-up Generation
         follow_ups = await self._generate_follow_ups(user_question, full_answer)
         yield PerplexityStreamEvent(event_type="follow_ups", data=follow_ups)
 
         duration = round(time.perf_counter() - start_time, 2)
-        yield PerplexityStreamEvent(event_type="status", data=f"Answer completed in {duration}s")
+        yield PerplexityStreamEvent(event_type="status", data=f"Completed in {duration}s")
         yield PerplexityStreamEvent(event_type="done", data="complete")
 
-        # 11. Write to Cache
+        # 8. Write to Cache
         cache_payload = {
             "query": user_question,
+            "mode": mode,
             "standalone_query": standalone_query,
             "answer": full_answer,
             "sources": [r.model_dump() for r in search_resp.results],
-            "citations": [c.model_dump() for c in citations],
+            "citations": citations_data,
             "follow_ups": follow_ups,
             "duration": duration,
         }
+        self.cache.set(cache_key, cache_payload, ttl_seconds=3600)
         self.cache.set(user_question, cache_payload, ttl_seconds=3600)
 
-        # 12. Save to Session
+        # 9. Save to Session
         if session:
             session.add_user_message(user_question)
             session.add_assistant_message(
@@ -288,6 +315,7 @@ class PerplexityEngine:
         user_question: str | None = None,
         question: str | None = None,
         session_id: str | None = None,
+        mode: str = "quick",
         tier: ModelTier | None = None,
         max_sources: int = 8,
         **kwargs: Any,
@@ -303,6 +331,7 @@ class PerplexityEngine:
         async for event in self.run_pipeline(
             user_question=actual_query,
             session_id=session_id,
+            mode=mode,
             max_search_results=max_sources,
         ):
             if event.event_type == "query_rewritten" and isinstance(event.data, str):

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from sophia.llm.models import ModelTier
@@ -23,5 +25,5 @@ class PerplexityResponse(BaseModel):
 class PerplexityStreamEvent(BaseModel):
     """Event emitted during streaming pipeline execution."""
 
-    event_type: str = Field(..., description="Type of event: 'query_planning', 'searching', 'sources', 'token', 'follow_ups', 'done'")
-    data: str | list[str] | list[SearchResult] | None = Field(default=None, description="Payload data")
+    event_type: str = Field(..., description="Type of event: 'query_planning', 'searching', 'sources', 'token', 'plan', 'section_start', 'follow_ups', 'done'")
+    data: Any = Field(default=None, description="Payload data")

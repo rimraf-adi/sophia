@@ -57,8 +57,16 @@
         <span id="session-display">Session: New</span>
       </div>
       <div class="header-actions">
+        <div class="mode-switch-group">
+          <button id="mode-quick-btn" class="mode-pill-btn active" data-mode="quick" title="Fast Search (Single pass synthesis)">
+            <i class="fa-solid fa-bolt"></i> Quick
+          </button>
+          <button id="mode-deep-btn" class="mode-pill-btn" data-mode="deep" title="Deep Agentic Search (Decomposes into sub-tasks)">
+            <i class="fa-solid fa-brain"></i> Deep Research
+          </button>
+        </div>
         <button id="toggle-cache-btn" class="chip-toggle active" title="Toggle Cache">
-          <i class="fa-solid fa-bolt"></i> Cache: ON
+          <i class="fa-solid fa-database"></i> Cache: ON
         </button>
       </div>
     </header>

@@ -12,8 +12,11 @@ When you ask a question, Sophia searches the web in real-time, scrapes the actua
 2. **Searches DuckDuckGo**: Finds 8–10 real web links without needing a paid search API.
 3. **Scrapes web pages**: Uses `trafilatura` to clean articles and remove ads, popups, and navbars.
 4. **Picks the best text**: Chunks the content and uses BM25 scoring to find the most relevant sections.
-5. **Streams the answer**: Streams the response live using rotating Groq API keys and models with inline citations.
-6. **Caches results**: Saves repeated searches in a local SQLite database for 1 hour.
+5. **Agentic Multi-Subtask Synthesis**:
+   - **⚡ Quick Mode**: Instant single-shot grounded synthesis with rotating Groq keys.
+   - **🧠 Deep Research Mode**: Decomposes complex queries into 2–4 focused sub-tasks/sections. Dedicated sub-agents write each section within their own token budget to produce in-depth, structured research reports without token limit truncation.
+6. **Unified Citations**: Keeps citation numbering (`[1]`, `[2]`, `[3]`) consistent across all generated sections.
+7. **Caches results**: Saves repeated searches in a local SQLite database for 1 hour.
 
 ---
 

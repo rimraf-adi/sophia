@@ -89,7 +89,7 @@
 
     <!-- Bottom Input Box -->
     <footer class="input-container">
-      <form id="search-form" class="search-box">
+      <form id="search-form" class="search-box" onsubmit="return false;">
         <div class="input-wrapper">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
           <textarea
@@ -101,7 +101,7 @@
           ></textarea>
         </div>
         <div class="input-actions">
-          <button type="submit" id="send-btn" class="send-button" title="Search">
+          <button type="button" id="send-btn" class="send-button" title="Search">
             <i class="fa-solid fa-arrow-up"></i>
           </button>
         </div>

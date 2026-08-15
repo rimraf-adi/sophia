@@ -1,12 +1,12 @@
 /**
- * PerpClone Frontend Engine
+ * Sophia Frontend Engine
  * Multi-turn Live Agentic RAG Client with SSE Streaming & Citation Linking
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   // --- State ---
-  let sessionId = localStorage.getItem('perp_session_id') || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  localStorage.setItem('perp_session_id', sessionId);
+  let sessionId = localStorage.getItem('sophia_session_id') || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  localStorage.setItem('sophia_session_id', sessionId);
   let useCache = true;
   let activeEventSource = null;
 
@@ -36,11 +36,37 @@ document.addEventListener('DOMContentLoaded', () => {
     queryInput.style.height = `${Math.min(queryInput.scrollHeight, 140)}px`;
   });
 
+  function startSearch() {
+    const query = queryInput.value.trim();
+    if (!query) return;
+
+    queryInput.value = '';
+    queryInput.style.height = 'auto';
+    executeSearchStream(query);
+  }
+
+  // Handle Enter keypress
   queryInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      searchForm.dispatchEvent(new Event('submit'));
+      e.stopPropagation();
+      startSearch();
     }
+  });
+
+  // Handle Send Button click
+  sendBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startSearch();
+  });
+
+  // Handle Form submit prevention
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startSearch();
+    return false;
   });
 
   // --- Toggle Cache ---
@@ -55,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- New Thread ---
   newThreadBtn.addEventListener('click', () => {
     sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    localStorage.setItem('perp_session_id', sessionId);
+    localStorage.setItem('sophia_session_id', sessionId);
     sessionDisplay.textContent = `Session: ${sessionId.substring(0, 14)}...`;
     threadContainer.innerHTML = '';
     heroSection.style.display = 'flex';
@@ -68,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const q = chip.getAttribute('data-query');
       if (q) {
         queryInput.value = q;
-        searchForm.dispatchEvent(new Event('submit'));
+        startSearch();
       }
     });
   });
@@ -127,21 +153,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === modelsModal) modelsModal.classList.remove('active');
   });
 
-  // --- Submit Handler ---
-  searchForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const query = queryInput.value.trim();
-    if (!query) return;
-
-    queryInput.value = '';
-    queryInput.style.height = 'auto';
-    executeSearchStream(query);
-  });
-
   // --- Execution Engine: SSE Streaming ---
   function executeSearchStream(query) {
     if (activeEventSource) {
       activeEventSource.close();
+      activeEventSource = null;
     }
 
     heroSection.style.display = 'none';
@@ -234,21 +250,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const followQuery = btn.getAttribute('data-query');
                 if (followQuery) {
                   queryInput.value = followQuery;
-                  searchForm.dispatchEvent(new Event('submit'));
+                  startSearch();
                 }
               });
             });
           }
         } else if (event_type === 'done') {
           stepper.style.display = 'none';
-          activeEventSource.close();
-          activeEventSource = null;
+          if (activeEventSource) {
+            activeEventSource.close();
+            activeEventSource = null;
+          }
           sendBtn.disabled = false;
           updatePoolStatus();
         } else if (event_type === 'error') {
           stepper.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#EF4444;"></i> <span style="color:#EF4444;">${escapeHtml(data)}</span>`;
-          activeEventSource.close();
-          activeEventSource = null;
+          if (activeEventSource) {
+            activeEventSource.close();
+            activeEventSource = null;
+          }
           sendBtn.disabled = false;
         }
       } catch (err) {
